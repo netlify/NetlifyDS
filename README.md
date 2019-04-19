@@ -10,7 +10,8 @@ Functions in this package are for the following purposes:
 `NetlifyDS` utilizes a number of R packages.  It loads packages as needed and assumes that they are installed. Install the package using:
 
 ```r
-library(devtools)
-install_github("happyrabbit/NetlifyDS")
+# if you haven't installed devtools
+# install.packages("devtools")
+devtools::install_github("netlify/NetlifyDS")
 library("NetlifyDS")
 ```
