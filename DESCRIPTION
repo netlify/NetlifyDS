@@ -3,7 +3,7 @@ Title: Netlify Data Science Using R
 Version: 0.0.0.9000
 Authors@R: person("Hui", "Lin", email = "longqiman@gmail.com", role = c("aut", "cre"))
 Description: The `NetlifyDS` package contains functions to streamline Netlify's data science project. It covers data pipeline, analytics, and modeling.
-Depends: R (>= 3.5.0)
+Depends: R (>= 3.4.0)
 License: MIT
 Imports:
     caret (>= 6.0.71),
