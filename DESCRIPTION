@@ -6,13 +6,6 @@ Description: The `NetlifyDS` package contains functions to streamline Netlify's 
 Depends: R (>= 3.4.0)
 License: MIT
 Imports:
-    caret (>= 6.0.71),
-    e1071 (>= 1.6.7),
-    nnet (>= 7.3.12),
-    randomForest (>= 4.6.12),
-    grplasso (>= 0.4.5),
-    vegan (>= 2.4.1),
-    ggplot2 (>= 2.1.0),
     stringr (>= 1.3.1),
     dplyr (>= 0.7.6),
     tidyr (>= 0.8.1),

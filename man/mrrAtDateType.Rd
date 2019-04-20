@@ -4,17 +4,17 @@
 \alias{mrrAtDateType}
 \title{Calculate MRR for a specific date and product type}
 \usage{
-mrrAtDateType(time_point, subs, type)
+mrrAtDateType(time_point, subs, type = NULL)
 }
 \arguments{
 \item{time_point}{a date value (have to be date type)}
 
-\item{subs}{subscription data}
+\item{subs}{subscription data, need to have columns: account_id,user_id,Product,Effective_Start,Effective_End,MRR}
 
-\item{type}{product type}
+\item{type}{product type, if "NULL", it will return MRR for each product}
 }
 \value{
-a number of MRR is returned
+a vector of MRR is returned
 }
 \description{
 It calculates the MRR given date, subscription date, and product type
