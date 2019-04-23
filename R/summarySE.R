@@ -18,7 +18,7 @@
 
 summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
                       conf.interval=.95, .drop=TRUE, pce_less_than_zero=FALSE) {
-  require(plyr)
+  require(dplyr)
 
   # New version of length which can handle NA's: if na.rm==T, don't count them
   length2 <- function (x, na.rm=FALSE) {
