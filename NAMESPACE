@@ -3,6 +3,8 @@
 S3method(plot,cv_glasso)
 S3method(plot,rocTest)
 S3method(plot,tune.cutoff)
+export(RevAct)
+export(RevActUser)
 export(clust_ana)
 export(cv_glasso)
 export(fitglasso)

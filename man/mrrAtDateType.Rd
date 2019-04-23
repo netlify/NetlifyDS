@@ -9,7 +9,7 @@ mrrAtDateType(time_point, subs, type = NULL)
 \arguments{
 \item{time_point}{a date value (have to be date type)}
 
-\item{subs}{subscription data, need to have columns: account_id,user_id,Product,Effective_Start,Effective_End,MRR}
+\item{subs}{subscription data, need to have columns: account_id, user_id, Product, Effective_Start, Effective_End, MRR}
 
 \item{type}{product type, if "NULL", it will return MRR for each product}
 }
@@ -17,7 +17,15 @@ mrrAtDateType(time_point, subs, type = NULL)
 a vector of MRR is returned
 }
 \description{
-It calculates the MRR given date, subscription date, and product type
+It calculates the MRR given date, subscription data, and product type
+}
+\examples{
+\dontrun{
+add_ons <- c("Forms", "Functions", "Identity", "Domains", "Large Media")
+dates <- seq(as.Date("2018-02-01"), lubridate::ceiling_date(Sys.Date(), unit = "month"), "months") - days(1)
+dates
+add_ons_mrr <- sapply(dates, function(time_point) {mrrAtDateType(time_point, datall_revenue, add_ons)})
+}
 }
 \author{
 Hui Lin, \email{longqiman@gmail.com}

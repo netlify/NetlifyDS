@@ -1,140 +1,128 @@
-## this is the function to get revenue accounting matrix
-## user level
-## column required: user_id, MRR, Effective_Start,  Effective_End
+#' Calculate revenue accounting matrix for each user
+#' @description It calculates the accounting matrix given date, subscription data.
+#' @param dates  a date vector (have to be date type)
+#' @param datall_revenue subscription data, need to have columns:  user_id, Effective_Start, Effective_End, MRR
+#' @return A revenue accounting matrix is returned for each date and user
+#' @author Hui Lin, \email{longqiman@gmail.com}
+#' @examples
+#' \dontrun{
+#' res = RevActUser(total_revenue, dates)
+#' }
+#' @export
 
-RevActUser <- function(datall_revenue, type, dates){
-  dat <- datall_revenue %>%
+
+RevActUser <- function(datall_revenue, dates){
+
+  dat <- total_revenue %>%
     # change this filter to get result for different products
-    filter(Product %in% type)%>%
+    # filter(Product %in% type)%>%
     transmute(user_id=user_id,
               MRR= MRR,
               Effective_Start = as.Date(Effective_Start),
               Effective_End = as.Date(Effective_End))
 
-  cnam <- c("New", "Retain", "Resurrected","Expansion", "Contraction", "Churn")
-  grow_matrix <- matrix(0,nrow=length(dates), ncol= length(cnam)) %>%
-    data.frame()
-  names(grow_matrix) <- cnam
-  # i=10
+  res_test = do.call("rbind",
+                     lapply(dates, function(time_point){
 
-  for (i in 1:length(dates)){
-    ####################################################################
-    ############# This block of code is for the previous defition of MRR
-    ############# based on the first day of each month
-    # current month is from the 2nd day of last month to current day
-    # int_start = dates[i] %m-% months(1) + days(1)
-    # int_end = dates[i]
-    # current = interval(int_start, int_end) # current month
+                       # current month is from the 1nd day to the last day each month
+                       int_start = floor_date(time_point, unit = "month")
+                       int_end = time_point
+                       current = interval(int_start, int_end) # current month
 
-    # previous month
-    # int_start = dates[i] %m-% months(2) + days(1)
-    # int_end = dates[i] %m-% months(1)
-    # previous = interval(int_start, int_end)
+                       # calculate new revenue which is from new customer this month
+                       active_current <- dat %>%
+                         filter(Effective_Start <= time_point) %>%
+                         filter(is.na(Effective_End) | Effective_End >= time_point) %>%
+                         group_by(user_id) %>%
+                         summarise(MRR = sum(MRR)) %>%
+                         select(user_id, MRR_current = MRR)
 
+                       # previous month
+                       int_start = floor_date(time_point, unit = "month")  %m-% months(1)
+                       int_end = ceiling_date(int_start, unit = "month") - days(1)
+                       previous = interval(int_start, int_end)
 
-    # all before until previous month
-    # int_start = dates[i] %m-% months(12*100)
-    # int_end = dates[i] %m-% months(2)
-    # past = interval(int_start, int_end)
-    ####################################################################
+                       active_last_month <- dat %>%
+                         filter(Effective_Start <= int_end) %>%
+                         filter(is.na(Effective_End) | Effective_End >= int_end) %>%
+                         group_by(user_id) %>%
+                         summarise(MRR = sum(MRR)) %>%
+                         select(user_id, MRR_last_month = MRR)
 
-    # current month is from the 1nd day to the last day each month
-    int_start = floor_date(dates[i], unit = "month")
-    int_end = dates[i]
-    current = interval(int_start, int_end) # current month
+                       # all before until previous month
+                       int_start = time_point %m-% months(12*100)
+                       int_end = floor_date(time_point, unit = "month")  %m-% months(1)
+                       int_end = int_end - days(1)
+                       past = interval(int_start, int_end)
 
-    # calculate new revenue which is from new customer this month
-    active_current <- dat %>%
-      filter(Effective_Start <= dates[i]) %>%
-      filter(is.na(Effective_End) | Effective_End >= dates[i]) %>%
-      group_by(user_id) %>%
-      summarise(MRR = sum(MRR)) %>%
-      select(user_id, MRR_current = MRR)
+                       active_past <- dat %>%
+                         filter(Effective_Start <= int_end) %>%
+                         filter(is.na(Effective_End) | Effective_End >= int_end ) %>%
+                         group_by(user_id) %>%
+                         summarise(MRR = sum(MRR)) %>%
+                         select(user_id, MRR_past = MRR)
 
-    # previous month
-    int_start = floor_date(dates[i], unit = "month")  %m-% months(1)
-    int_end = ceiling_date(int_start, unit = "month") - days(1)
-    previous = interval(int_start, int_end)
+                       alltable <- merge(active_current, active_last_month, all = T) %>%
+                         merge(active_past, all=T)
 
-    active_last_month <- dat %>%
-      filter(Effective_Start <= int_end) %>%
-      filter(is.na(Effective_End) | Effective_End >= int_end) %>%
-      group_by(user_id) %>%
-      summarise(MRR = sum(MRR)) %>%
-      select(user_id, MRR_last_month = MRR)
+                       new <- alltable %>%
+                         filter(is.na(MRR_past)&is.na(MRR_last_month)) %>%
+                         select(user_id,new = MRR_current)
 
-    # all before until previous month
-    int_start = dates[i] %m-% months(12*100)
-    int_end = floor_date(dates[i], unit = "month")  %m-% months(1)
-    int_end = int_end - days(1)
-    past = interval(int_start, int_end)
+                       resurrected <- alltable %>%
+                         filter(!is.na(MRR_current))%>%
+                         filter(is.na(MRR_last_month)) %>%
+                         filter(!is.na(MRR_past)) %>%
+                         select(user_id,resurrected = MRR_current)
 
-    active_past <- dat %>%
-      filter(Effective_Start <= int_end) %>%
-      filter(is.na(Effective_End) | Effective_End >= int_end ) %>%
-      group_by(user_id) %>%
-      summarise(MRR = sum(MRR)) %>%
-      select(user_id, MRR_past = MRR)
+                       # an alternative way is to add up the smaller number from MRR_current and MRR_last_month
+                       retain1 <- alltable %>%
+                         filter(!is.na(MRR_current)) %>%
+                         filter(!is.na(MRR_last_month))%>%
+                         filter(MRR_current >= MRR_last_month) %>%
+                         select(user_id,retain1 = MRR_last_month)
 
-    alltable <- merge(active_current, active_last_month, all = T) %>%
-      merge(active_past, all=T)
+                       retain2 <- alltable %>%
+                         filter(!is.na(MRR_current)) %>%
+                         filter(!is.na(MRR_last_month))%>%
+                         filter(MRR_current < MRR_last_month) %>%
+                         select(user_id,retain2 = MRR_current)
 
-    new <- alltable %>%
-      filter(is.na(MRR_past)&is.na(MRR_last_month)) %>%
-      summarise(MRR = sum(MRR_current, na.rm = T))
+                       retain = merge(retain1, retain2, all=T) %>%
+                         impute0()%>%
+                         transmute(user_id = user_id, retain = retain1 + retain2)
 
-    resurrected <- alltable %>%
-      filter(!is.na(MRR_current))%>%
-      filter(is.na(MRR_last_month)) %>%
-      filter(!is.na(MRR_past)) %>%
-      summarise(MRR = sum(MRR_current, na.rm = T))
+                       expansion <- alltable %>%
+                         filter(!is.na(MRR_current)) %>%
+                         filter(!is.na(MRR_last_month))%>%
+                         filter(MRR_current > MRR_last_month) %>%
+                         impute0()%>%
+                         transmute(user_id = user_id, expansion = MRR_current-MRR_last_month)
 
-    # an alternative way is to add up the smaller number from MRR_current and MRR_last_month
-    retain1 <- alltable %>%
-      filter(!is.na(MRR_current)) %>%
-      filter(!is.na(MRR_last_month))%>%
-      filter(MRR_current >= MRR_last_month) %>%
-      summarise(MRR = sum(MRR_last_month, na.rm = T))
+                       contraction <- alltable %>%
+                         filter(!is.na(MRR_current))%>%
+                         filter(!is.na(MRR_last_month)) %>%
+                         filter(MRR_current < MRR_last_month) %>%
+                         impute0()%>%
+                         transmute(user_id = user_id, contraction =MRR_last_month-MRR_current)
 
-    retain2 <- alltable %>%
-      filter(!is.na(MRR_current)) %>%
-      filter(!is.na(MRR_last_month))%>%
-      filter(MRR_current < MRR_last_month) %>%
-      summarise(MRR = sum(MRR_current, na.rm = T))
+                       churn <- alltable %>%
+                         filter(is.na(MRR_current))%>%
+                         filter(!is.na(MRR_last_month)) %>%
+                         transmute(user_id = user_id, churn =MRR_last_month)
 
-    retain = retain1 + retain2
+                       res0 = merge(new, resurrected, all = T)
+                       res0 = merge(res0, retain, all = T)
+                       res0 = merge(res0, expansion, all = T)
+                       res0 = merge(res0, contraction, all = T)
+                       res0 = merge(res0, churn, all = T)
+                       res0 = impute0(res0)
 
-    expansion <- alltable %>%
-      filter(!is.na(MRR_current)) %>%
-      filter(!is.na(MRR_last_month))%>%
-      filter(MRR_current > MRR_last_month) %>%
-      summarise(MRR = sum(MRR_current-MRR_last_month, na.rm = T))
+                       res0$date = time_point
 
-    contraction <- alltable %>%
-      filter(!is.na(MRR_current))%>%
-      filter(!is.na(MRR_last_month)) %>%
-      filter(MRR_current < MRR_last_month) %>%
-      summarise(MRR = sum(MRR_last_month-MRR_current, na.rm = T))
+                       return(res0)
+                     }
+                     ) )
 
-    churn <- alltable %>%
-      filter(is.na(MRR_current))%>%
-      filter(!is.na(MRR_last_month)) %>%
-      summarise(MRR = sum(MRR_last_month, na.rm = T))
-
-    grow_matrix[i, "New"] <- new
-    grow_matrix[i, "Retain"] <- retain
-    grow_matrix[i, "Resurrected"] <- resurrected
-    grow_matrix[i, "Expansion"] <- expansion
-    grow_matrix[i, "Contraction"] <- contraction
-    grow_matrix[i, "Churn"] <- churn
-  }
-
-  grow_matrix$dates <- dates
-
-  grow_matrix <- grow_matrix %>%
-    mutate(MRR = New + Retain + Resurrected + Expansion,
-           ARR = MRR*12) %>%
-    mutate(QuickRatio = round((New + Resurrected+ Expansion)/(Churn+Contraction),2))
-
-  return(grow_matrix)
+  return(res_test)
 }

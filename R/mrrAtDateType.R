@@ -1,16 +1,18 @@
 #' Calculate MRR for a specific date and product type
-#' @description It calculates the MRR given date, subscription date, and product type
+#' @description It calculates the MRR given date, subscription data, and product type
 #' @param time_point  a date value (have to be date type)
-#' @param subs subscription data, need to have columns: account_id,user_id,Product,Effective_Start,Effective_End,MRR
+#' @param subs subscription data, need to have columns: account_id, user_id, Product, Effective_Start, Effective_End, MRR
 #' @param type product type, if "NULL", it will return MRR for each product
 #' @return
 #' a vector of MRR is returned
 #' @author Hui Lin, \email{longqiman@gmail.com}
 #' @examples
 #' \dontrun{
+#' add_ons <- c("Forms", "Functions", "Identity", "Domains", "Large Media")
 #' dates <- seq(as.Date("2018-02-01"), lubridate::ceiling_date(Sys.Date(), unit = "month"), "months") - days(1)
 #' dates
 #' add_ons_mrr <- sapply(dates, function(time_point) {mrrAtDateType(time_point, datall_revenue, add_ons)})
+#' }
 #' @export
 #'
 
