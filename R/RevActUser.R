@@ -1,8 +1,8 @@
-#' Calculate revenue accounting matrix for each user
+#' Calculate revenue accounting matrix for each day and user
 #' @description It calculates the accounting matrix given date, subscription data.
 #' @param dates  a date vector (have to be date type)
 #' @param datall_revenue subscription data, need to have columns:  user_id, Effective_Start, Effective_End, MRR
-#' @return A revenue accounting matrix is returned for each date and user
+#' @return A revenue accounting matrix is returned for each day and user
 #' @author Hui Lin, \email{longqiman@gmail.com}
 #' @examples
 #' \dontrun{
@@ -65,26 +65,31 @@ RevActUser <- function(datall_revenue, dates){
                        alltable <- merge(active_current, active_last_month, all = T) %>%
                          merge(active_past, all=T)
 
+                       ########################## Break out the revenue ###########################
+
+                       # current month is from the 1nd day to the last day each month
+
                        new <- alltable %>%
-                         filter(is.na(MRR_past)&is.na(MRR_last_month)) %>%
-                         select(user_id,new = MRR_current)
+                         filter( (is.na(MRR_past) | MRR_past <= 0) &  (is.na(MRR_last_month) | MRR_last_month <= 0 ) ) %>%
+                         select(user_id, new = MRR_current )
 
                        resurrected <- alltable %>%
-                         filter(!is.na(MRR_current))%>%
-                         filter(is.na(MRR_last_month)) %>%
-                         filter(!is.na(MRR_past)) %>%
+                         filter( (!is.na(MRR_current)) & MRR_current > 0  )%>%
+                         filter( is.na(MRR_last_month) | MRR_last_month <= 0) %>%
+                         filter( (!is.na(MRR_past)) & MRR_past > 0 ) %>%
                          select(user_id,resurrected = MRR_current)
 
                        # an alternative way is to add up the smaller number from MRR_current and MRR_last_month
+
                        retain1 <- alltable %>%
-                         filter(!is.na(MRR_current)) %>%
-                         filter(!is.na(MRR_last_month))%>%
+                         filter( (!is.na(MRR_current)) &  MRR_current > 0 ) %>%
+                         filter( (!is.na(MRR_last_month)) & MRR_last_month > 0 )%>%
                          filter(MRR_current >= MRR_last_month) %>%
                          select(user_id,retain1 = MRR_last_month)
 
                        retain2 <- alltable %>%
-                         filter(!is.na(MRR_current)) %>%
-                         filter(!is.na(MRR_last_month))%>%
+                         filter( (!is.na(MRR_current)) &  MRR_current > 0 ) %>%
+                         filter( (!is.na(MRR_last_month)) & MRR_last_month > 0 )%>%
                          filter(MRR_current < MRR_last_month) %>%
                          select(user_id,retain2 = MRR_current)
 
@@ -93,22 +98,22 @@ RevActUser <- function(datall_revenue, dates){
                          transmute(user_id = user_id, retain = retain1 + retain2)
 
                        expansion <- alltable %>%
-                         filter(!is.na(MRR_current)) %>%
-                         filter(!is.na(MRR_last_month))%>%
+                         filter(   (!is.na(MRR_current)) &  MRR_current > 0 ) %>%
+                         filter( (!is.na(MRR_last_month)) & MRR_last_month > 0 )%>%
                          filter(MRR_current > MRR_last_month) %>%
                          impute0()%>%
                          transmute(user_id = user_id, expansion = MRR_current-MRR_last_month)
 
                        contraction <- alltable %>%
-                         filter(!is.na(MRR_current))%>%
-                         filter(!is.na(MRR_last_month)) %>%
+                         filter( (!is.na(MRR_current)) &  MRR_current > 0  )%>%
+                         filter( (!is.na(MRR_last_month)) & MRR_last_month > 0 ) %>%
                          filter(MRR_current < MRR_last_month) %>%
                          impute0()%>%
                          transmute(user_id = user_id, contraction =MRR_last_month-MRR_current)
 
                        churn <- alltable %>%
-                         filter(is.na(MRR_current))%>%
-                         filter(!is.na(MRR_last_month)) %>%
+                         filter( is.na(MRR_current) | MRR_current <= 0 ) %>%
+                         filter( (!is.na(MRR_last_month)) & MRR_last_month > 0 ) %>%
                          transmute(user_id = user_id, churn =MRR_last_month)
 
                        res0 = merge(new, resurrected, all = T)
@@ -119,6 +124,7 @@ RevActUser <- function(datall_revenue, dates){
                        res0 = impute0(res0)
 
                        res0$date = time_point
+                       res0 = res0 %>% filter( !(new == 0 &  resurrected == 0 & retain == 0 &  expansion == 0 & contraction == 0 & churn == 0) )
 
                        return(res0)
                      }

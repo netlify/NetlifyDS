@@ -2,7 +2,7 @@
 % Please edit documentation in R/RevActUser.R
 \name{RevActUser}
 \alias{RevActUser}
-\title{Calculate revenue accounting matrix for each user}
+\title{Calculate revenue accounting matrix for each day and user}
 \usage{
 RevActUser(datall_revenue, dates)
 }
@@ -12,7 +12,7 @@ RevActUser(datall_revenue, dates)
 \item{dates}{a date vector (have to be date type)}
 }
 \value{
-A revenue accounting matrix is returned for each date and user
+A revenue accounting matrix is returned for each day and user
 }
 \description{
 It calculates the accounting matrix given date, subscription data.
