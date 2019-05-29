@@ -1,5 +1,5 @@
 #' Calculate revenue accounting matrix
-#' @description It calculates the accounting matrix given date, subscription data, and product type. It only returns one row for each date, i.e. it will sum up all the products.
+#' @description It calculates the accounting matrix given date and subscription data. It only returns one row for each date, i.e. it will sum up all the products.
 #' @param dates  a date vector (have to be date type)
 #' @param datall_revenue subscription data, need to have columns:  user_id, Product, Effective_Start, Effective_End, MRR
 #' @param type product type

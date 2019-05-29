@@ -17,7 +17,7 @@ RevAct(datall_revenue, type, dates)
 A revenue accounting matrix is returned for each date.
 }
 \description{
-It calculates the accounting matrix given date, subscription data, and product type. It only returns one row for each date, i.e. it will sum up all the products.
+It calculates the accounting matrix given date and subscription data. It only returns one row for each date, i.e. it will sum up all the products.
 }
 \examples{
 \dontrun{
