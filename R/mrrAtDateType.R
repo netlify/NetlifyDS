@@ -28,7 +28,8 @@ mrrAtDateType <- function(time_point, subs, type = NULL) {
 
     res <- actives %>%
       dplyr::group_by(account_id,user_id,Product) %>%
-      dplyr::summarise(MRR = sum(MRR , na.rm=T))
+      # round it in case we have some magic number again
+      dplyr::summarise(MRR = round(sum(MRR , na.rm=T), 10))
 
     res$Date = time_point
     return(res)

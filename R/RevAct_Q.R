@@ -53,7 +53,7 @@ RevAct_Q <- function(datall_revenue, type, dates){
       filter(Effective_Start <= dates[i]) %>%
       filter(is.na(Effective_End) | Effective_End >= dates[i]) %>%
       group_by(user_id) %>%
-      summarise(MRR = sum(MRR)) %>%
+      summarise(MRR = round(sum(MRR), 10)) %>%
       select(user_id, MRR_current = MRR)
 
     # previous Q
@@ -65,7 +65,7 @@ RevAct_Q <- function(datall_revenue, type, dates){
       filter(Effective_Start <= int_end) %>%
       filter(is.na(Effective_End) | Effective_End >= int_end) %>%
       group_by(user_id) %>%
-      summarise(MRR = sum(MRR)) %>%
+      summarise(MRR = round(sum(MRR), 10)) %>%
       select(user_id, MRR_last_month = MRR)
 
     # all before until previous month
@@ -77,7 +77,7 @@ RevAct_Q <- function(datall_revenue, type, dates){
       filter(Effective_Start <= int_end) %>%
       filter(is.na(Effective_End) | Effective_End >= int_end ) %>%
       group_by(user_id) %>%
-      summarise(MRR = sum(MRR)) %>%
+      summarise(MRR = round(sum(MRR), 10)) %>%
       select(user_id, MRR_past = MRR)
 
     alltable <- merge(active_current, active_last_month, all = T) %>%
