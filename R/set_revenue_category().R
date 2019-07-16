@@ -5,6 +5,6 @@ set_revenue_category <- function () {
   assign("legacy", c("domain", "site", "ssl", "bitballoon-monthly-june-2013", "Legacy Netlify Sites",
                    "bitballoon-yearly-june-2013", "automation"), envir = .GlobalEnv)
   assign("inside", c("Enterprise plans", "Reseller plans","Unlimited-Identity"), envir = .GlobalEnv)
-  assign("add_ons", c("Forms", "Functions", "Identity", "Domains","Large Media"), envir = .GlobalEnv)
+  assign("add_ons", c("Forms", "Functions", "Identity", "Domains","Large Media", "Analytics"), envir = .GlobalEnv)
   assign("selfServe",c(team, legacy, add_ons), envir = .GlobalEnv)
 }
