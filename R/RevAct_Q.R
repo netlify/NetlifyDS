@@ -53,7 +53,7 @@ RevAct_Q <- function(datall_revenue, type, dates){
       filter(Effective_Start <= dates[i]) %>%
       filter(is.na(Effective_End) | Effective_End >= dates[i]) %>%
       group_by(user_id) %>%
-      summarise(MRR = round(sum(MRR), 10)) %>%
+      summarise(MRR = round(sum(MRR), 2) ) %>%
       select(user_id, MRR_current = MRR)
 
     # previous Q
@@ -65,7 +65,7 @@ RevAct_Q <- function(datall_revenue, type, dates){
       filter(Effective_Start <= int_end) %>%
       filter(is.na(Effective_End) | Effective_End >= int_end) %>%
       group_by(user_id) %>%
-      summarise(MRR = round(sum(MRR), 10)) %>%
+      summarise(MRR = round(sum(MRR),2) ) %>%
       select(user_id, MRR_last_month = MRR)
 
     # all before until previous month
@@ -77,52 +77,66 @@ RevAct_Q <- function(datall_revenue, type, dates){
       filter(Effective_Start <= int_end) %>%
       filter(is.na(Effective_End) | Effective_End >= int_end ) %>%
       group_by(user_id) %>%
-      summarise(MRR = round(sum(MRR), 10)) %>%
+      summarise(MRR = round(sum(MRR),2)) %>%
       select(user_id, MRR_past = MRR)
 
     alltable <- merge(active_current, active_last_month, all = T) %>%
       merge(active_past, all=T)
 
     new <- alltable %>%
-      filter(is.na(MRR_past)&is.na(MRR_last_month)) %>%
+      # filter(is.na(MRR_past)&is.na(MRR_last_month)) %>%
+      filter( (is.na(MRR_past) | MRR_past <= 0) &  (is.na(MRR_last_month) | MRR_last_month <= 0 ) ) %>%
       summarise(MRR = sum(MRR_current, na.rm = T))
 
     resurrected <- alltable %>%
-      filter(!is.na(MRR_current))%>%
-      filter(is.na(MRR_last_month)) %>%
-      filter(!is.na(MRR_past)) %>%
+      # filter(!is.na(MRR_current))%>%
+      # filter(is.na(MRR_last_month)) %>%
+      # filter(!is.na(MRR_past)) %>%
+      filter( (!is.na(MRR_current)) & MRR_current > 0  )%>%
+      filter( is.na(MRR_last_month) | MRR_last_month <= 0) %>%
+      filter( (!is.na(MRR_past)) & MRR_past > 0 ) %>%
       summarise(MRR = sum(MRR_current, na.rm = T))
 
     # an alternative way is to add up the smaller number from MRR_current and MRR_last_month
     retain1 <- alltable %>%
-      filter(!is.na(MRR_current)) %>%
-      filter(!is.na(MRR_last_month))%>%
+      # filter(!is.na(MRR_current)) %>%
+      # filter(!is.na(MRR_last_month)) %>%
+      filter( (!is.na(MRR_current)) &  MRR_current > 0 ) %>%
+      filter( (!is.na(MRR_last_month)) & MRR_last_month > 0 )%>%
       filter(MRR_current >= MRR_last_month) %>%
       summarise(MRR = sum(MRR_last_month, na.rm = T))
 
     retain2 <- alltable %>%
-      filter(!is.na(MRR_current)) %>%
-      filter(!is.na(MRR_last_month))%>%
+      # filter(!is.na(MRR_current)) %>%
+      # filter(!is.na(MRR_last_month))%>%
+      filter( (!is.na(MRR_current)) &  MRR_current > 0 ) %>%
+      filter( (!is.na(MRR_last_month)) & MRR_last_month > 0 )%>%
       filter(MRR_current < MRR_last_month) %>%
       summarise(MRR = sum(MRR_current, na.rm = T))
 
     retain = retain1 + retain2
 
     expansion <- alltable %>%
-      filter(!is.na(MRR_current)) %>%
-      filter(!is.na(MRR_last_month))%>%
+      # filter(!is.na(MRR_current)) %>%
+      # filter(!is.na(MRR_last_month))%>%
+      filter(   (!is.na(MRR_current)) &  MRR_current > 0 ) %>%
+      filter( (!is.na(MRR_last_month)) & MRR_last_month > 0 )%>%
       filter(MRR_current > MRR_last_month) %>%
-      summarise(MRR = sum(MRR_current-MRR_last_month, na.rm = T))
+      summarise(MRR = sum(MRR_current, na.rm = T) - sum(MRR_last_month, na.rm = T))
 
     contraction <- alltable %>%
-      filter(!is.na(MRR_current))%>%
-      filter(!is.na(MRR_last_month)) %>%
+      # filter(!is.na(MRR_current))%>%
+      # filter(!is.na(MRR_last_month)) %>%
+      filter( (!is.na(MRR_current)) &  MRR_current > 0  )%>%
+      filter( (!is.na(MRR_last_month)) & MRR_last_month > 0 ) %>%
       filter(MRR_current < MRR_last_month) %>%
-      summarise(MRR = sum(MRR_last_month-MRR_current, na.rm = T))
+      summarise(MRR = sum(MRR_last_month, na.rm = T) -sum(MRR_current, na.rm = T))
 
     churn <- alltable %>%
-      filter(is.na(MRR_current))%>%
-      filter(!is.na(MRR_last_month)) %>%
+      # filter(is.na(MRR_current))%>%
+      # filter(!is.na(MRR_last_month)) %>%
+      filter( is.na(MRR_current) | MRR_current <= 0 ) %>%
+      filter( (!is.na(MRR_last_month)) & MRR_last_month > 0 ) %>%
       summarise(MRR = sum(MRR_last_month, na.rm = T))
 
     grow_matrix[i, "New"] <- new
