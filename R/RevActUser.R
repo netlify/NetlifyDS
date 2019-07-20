@@ -109,7 +109,7 @@ RevActUser <- function(datall_revenue, dates){
                          filter( (!is.na(MRR_last_month)) & MRR_last_month > 0 ) %>%
                          filter(MRR_current < MRR_last_month) %>%
                          impute0()%>%
-                         transmute(user_id = user_id, contraction =MRR_last_month-MRR_current)
+                         transmute(user_id = user_id, contraction = MRR_last_month-MRR_current)
 
                        churn <- alltable %>%
                          filter( is.na(MRR_current) | MRR_current <= 0 ) %>%
