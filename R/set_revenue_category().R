@@ -7,6 +7,6 @@ set_revenue_category <- function () {
                    "bitballoon-yearly-june-2013", "automation"), envir = .GlobalEnv)
   assign("inside", c("Enterprise plans", "Reseller plans","Unlimited-Identity"), envir = .GlobalEnv)
   assign("add_ons", c("Forms", "Functions", "Identity", "Domains","Large Media", "Analytics", "Extra team members"), envir = .GlobalEnv)
-  assign("selfServe", c(team, legacy, add_ons), envir = .GlobalEnv)
+  assign("selfServe", c(core, legacy, add_ons), envir = .GlobalEnv)
   assign("core", c(team, "Extra team members"), envir = .GlobalEnv)
 }
