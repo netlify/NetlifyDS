@@ -32,7 +32,7 @@ RevActUser <- function(datall_revenue, dates){
                        # calculate new revenue which is from new customer this month
                        active_current <- dat %>%
                          filter(Effective_Start <= time_point) %>%
-                         filter(is.na(Effective_End) | Effective_End >= time_point) %>%
+                         filter(is.na(Effective_End) | Effective_End > time_point) %>%
                          group_by(user_id) %>%
                          summarise(MRR = round(sum(MRR), 2)) %>%
                          select(user_id, MRR_current = MRR)
@@ -44,7 +44,7 @@ RevActUser <- function(datall_revenue, dates){
 
                        active_last_month <- dat %>%
                          filter(Effective_Start <= int_end) %>%
-                         filter(is.na(Effective_End) | Effective_End >= int_end) %>%
+                         filter(is.na(Effective_End) | Effective_End > int_end) %>%
                          group_by(user_id) %>%
                          summarise(MRR = round(sum(MRR), 2)) %>%
                          select(user_id, MRR_last_month = MRR)
@@ -57,7 +57,7 @@ RevActUser <- function(datall_revenue, dates){
 
                        active_past <- dat %>%
                          filter(Effective_Start <= int_end) %>%
-                         filter(is.na(Effective_End) | Effective_End >= int_end ) %>%
+                         filter(is.na(Effective_End) | Effective_End > int_end ) %>%
                          group_by(user_id) %>%
                          summarise(MRR = round(sum(MRR), 2)) %>%
                          select(user_id, MRR_past = MRR)

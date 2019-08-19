@@ -6,7 +6,7 @@ NoAcctDateType <- function(time_point, subs, type) {
   actives <- subs  %>%
     filter(Product %in% type) %>%
     filter(Effective_Start <= time_point) %>%
-    filter( is.na(Effective_End) | Effective_End >= time_point) %>%
+    filter( is.na(Effective_End) | Effective_End > time_point) %>%
     # only keep those account with positive mrr
     filter(MRR > 0)
   # return the number of accounts

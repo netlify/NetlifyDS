@@ -24,7 +24,7 @@ mrrAtDateType <- function(time_point, subs, type = NULL) {
   if (is.null(type)){
     actives <- subs  %>%
       dplyr::filter(Effective_Start <= time_point) %>%
-      dplyr::filter( is.na(Effective_End) | Effective_End >= time_point)
+      dplyr::filter( is.na(Effective_End) | Effective_End > time_point)
 
     res <- actives %>%
       dplyr::group_by(account_id,user_id,Product) %>%
@@ -38,7 +38,7 @@ mrrAtDateType <- function(time_point, subs, type = NULL) {
     actives <- subs  %>%
       dplyr::filter(Product %in% type) %>%
       dplyr::filter(Effective_Start <= time_point) %>%
-      dplyr::filter(is.na(Effective_End) | Effective_End >= time_point)
+      dplyr::filter(is.na(Effective_End) | Effective_End > time_point)
     return(sum(actives$MRR , na.rm=T))
   }
 
