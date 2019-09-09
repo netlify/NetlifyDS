@@ -16,7 +16,7 @@ summarySE(data = NULL, measurevar, groupvars = NULL, na.rm = FALSE,
 
 \item{na.rm}{a boolean that indicates whether to ignore NA's}
 
-\item{conf.interval}{the percent range of the confidence interval (default is 95\%)}
+\item{conf.interval}{the percent range of the confidence interval (default is 95%)}
 
 \item{pce_less_than_zero}{if TRUE, function will report the percentage of observation that is < 0}
 }
