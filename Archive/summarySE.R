@@ -1,4 +1,3 @@
-#' Summarizes data.
 #' @description  Gives count, mean, standard deviation, standard error of the mean, and confidence interval (default 95%).
 #' @param data a data frame.
 #' @param measurevar the name of a column that contains the variable to be summariezed
