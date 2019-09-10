@@ -3,6 +3,7 @@
 S3method(plot,cv_glasso)
 S3method(plot,rocTest)
 S3method(plot,tune.cutoff)
+export(MeterRevAct)
 export(RevAct)
 export(RevActUser)
 export(RevActUserProduct)
