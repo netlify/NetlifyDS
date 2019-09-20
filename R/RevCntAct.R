@@ -92,6 +92,7 @@ RevCntAct <- function(datall_revenue, type, dates){
     new <- alltable %>%
       # filter(is.na(MRR_past)&is.na(MRR_last_month)) %>%
       filter( (is.na(MRR_past) | MRR_past <= 0) &  (is.na(MRR_last_month) | MRR_last_month <= 0 ) ) %>%
+      filter( MRR_current > 0 ) %>%
       summarise(user_cnt = length(unique(user_id)))
 
     resurrected <- alltable %>%
