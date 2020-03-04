@@ -23,6 +23,9 @@ It calculates the accounting matrix by counts given date and subscription data. 
 \dontrun{
 dates <- seq(as.Date("2018-02-01"), lubridate::ceiling_date(Sys.Date(), unit = "month"), "months") - days(1)
 dates
+# need to get daily revenue from subscription data if you don't have that already
+base_monthly = do.call("rbind", lapply(dates, function(time_point)
+{NetlifyDS::mrrAtDateType(time_point, subs = base_monthly, type = NULL)})
 growth_matrix_identity = RevCntAct(datall_revenue = total_revenue, type = c("Identity"), dates = dates)
 }
 }

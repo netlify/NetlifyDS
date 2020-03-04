@@ -23,7 +23,9 @@ It calculates the accounting matrix given date and daily revenue data. It only r
 \dontrun{
 dates <- seq(as.Date("2018-02-01"), lubridate::ceiling_date(Sys.Date(), unit = "month"), "months") - days(1)
 dates
-growth_matrix_identity = RevAct(datall_revenue = total_revenue, type = c("Identity"), dates = dates)
+# need to get daily revenue from subscription data if you don't have that already
+base_monthly = do.call("rbind", lapply(dates, function(time_point)
+growth_matrix_identity = RevAct(datall_revenue = base_monthly, type = c("Identity"), dates = dates)
 }
 }
 \author{
