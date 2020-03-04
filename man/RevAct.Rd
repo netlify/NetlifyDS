@@ -7,7 +7,7 @@
 RevAct(datall_revenue, type, dates)
 }
 \arguments{
-\item{datall_revenue}{subscription data, need to have columns:  user_id, Product, Effective_Start, Effective_End, MRR}
+\item{datall_revenue}{daily revenue data, need to have columns:  user_id, Product, active_date, MRR}
 
 \item{type}{product type}
 
@@ -17,7 +17,7 @@ RevAct(datall_revenue, type, dates)
 A revenue accounting matrix is returned for each date.
 }
 \description{
-It calculates the accounting matrix given date and subscription data. It only returns one row for each date, i.e. it will sum up all the products.
+It calculates the accounting matrix given date and daily revenue data. It only returns one row for each date, i.e. it will sum up all the products.
 }
 \examples{
 \dontrun{
