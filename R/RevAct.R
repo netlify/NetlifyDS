@@ -16,138 +16,97 @@
 
 RevAct <- function(datall_revenue, type, dates){
 
-  dat <- datall_revenue %>%
-    ## change this filter to get result for different products
-    filter(Product %in% type)%>%
-    transmute(user_id=user_id,
-              MRR= MRR,
-              Effective_Start = as.Date(Effective_Start),
-              Effective_End = as.Date(Effective_End))
 
-  ## set up the matrix and fiil in values
+  dat <- datall_revenue %>%
+    ungroup()%>%
+    ## change this filter to get result for different products
+    filter(Product %in% type) %>%
+    transmute(user_id = user_id,
+              MRR= MRR,
+              active_date = as.Date(active_date)) %>%
+    group_by(user_id, active_date) %>%
+    summarise(MRR = round(sum(MRR), 2)) %>%
+    ungroup()
+
   cnam <- c("New", "Retain", "Resurrected","Expansion", "Contraction", "Churn")
   grow_matrix <- matrix(0,nrow=length(dates), ncol= length(cnam)) %>%
     data.frame()
   names(grow_matrix) <- cnam
-  # i=10
 
   for (i in 1:length(dates)){
-    ####################################################################
-    ############# This block of code is for the previous defition of MRR
-    ############# based on the first day of each month
-    # current month is from the 2nd day of last month to current day
-    # int_start = dates[i] %m-% months(1) + days(1)
-    # int_end = dates[i]
-    # current = interval(int_start, int_end) # current month
+    # the current month
+    cmon = dates[i]
 
-    # previous month
-    # int_start = dates[i] %m-% months(2) + days(1)
-    # int_end = dates[i] %m-% months(1)
-    # previous = interval(int_start, int_end)
+    # the previous month
+    pmon = floor_date(dates[i], unit = "month")- days(1)
 
+    # the legacy month
+    lmon = dates[dates < pmon]
 
-    # all before until previous month
-    # int_start = dates[i] %m-% months(12*100)
-    # int_end = dates[i] %m-% months(2)
-    # past = interval(int_start, int_end)
-    ####################################################################
+    # current mrr
+    cmrr = dat %>%
+      filter(active_date == cmon) %>%
+      select(user_id, cmrr = MRR) %>%
+      filter(cmrr > 0)
 
-    # current month is from the 1nd day to the last day each month
-    int_start_current = floor_date(dates[i], unit = "month")
-    int_end_current = dates[i]
-    current = interval(int_start_current, int_end_current) # current month
+    # previous mrr
+    pmrr = dat %>%
+      filter(active_date == pmon) %>%
+      select(user_id, pmrr = MRR) %>%
+      filter(pmrr > 0)
 
-    # calculate new revenue which is from new customer this month
-    active_current <- dat %>%
-      filter(Effective_Start <= dates[i]) %>%
-      filter(is.na(Effective_End) | Effective_End > dates[i]) %>%
+    # legacy mrr, get the maximum number
+    lmrr = dat %>%
+      filter(active_date %in% lmon) %>%
       group_by(user_id) %>%
-      summarise(MRR = round(sum(MRR), 2)) %>%
-      select(user_id, MRR_current = MRR)
+      summarise(lmrr = max(MRR)) %>%
+      filter(lmrr > 0)
 
-    # previous month
-    int_start_previous = floor_date(dates[i], unit = "month")  %m-% months(1)
-    int_end_previous = ceiling_date(int_start_previous, unit = "month") - days(1)
-    previous = interval(int_start_previous, int_end_previous)
 
-    active_last_month <- dat %>%
-      filter(Effective_Start <= int_end_previous) %>%
-      filter(is.na(Effective_End) | Effective_End > int_end_previous) %>%
-      group_by(user_id) %>%
-      summarise(MRR = round(sum(MRR), 2)) %>%
-      select(user_id, MRR_last_month = MRR)
+    # join all together
+    alltable <- merge(cmrr, pmrr, all = T) %>%
+      merge(lmrr, all=T) %>%
+      NetlifyDS::impute_dat(method = "zero")
 
-    # all before until previous month
-    int_start_past = dates[i] %m-% months(12*100)
-    int_end_past = floor_date(dates[i], unit = "month")  %m-% months(1)
-    int_end_past = int_end_past - days(1)
-    past = interval(int_start_past, int_end_past)
+    # Get new
+    new = alltable %>%
+      filter( cmrr > 0 & pmrr == 0 & lmrr == 0) %>%
+      summarise(MRR = sum(cmrr, na.rm = T))
 
-    active_past <- dat %>%
-      filter(Effective_Start <= int_end_past) %>%
-      filter(is.na(Effective_End) | Effective_End > int_end_past) %>%
-      group_by(user_id) %>%
-      summarise(MRR = round(sum(MRR), 2)) %>%
-      select(user_id, MRR_past = MRR)
-
-    alltable <- merge(active_current, active_last_month, all = T) %>%
-      merge(active_past, all=T)
-
-    new <- alltable %>%
-      # filter(is.na(MRR_past)&is.na(MRR_last_month)) %>%
-      filter( (is.na(MRR_past) | MRR_past <= 0) &  (is.na(MRR_last_month) | MRR_last_month <= 0 ) ) %>%
-      summarise(MRR = sum(MRR_current, na.rm = T))
-
+    # Get reesurrected
     resurrected <- alltable %>%
-      # filter(!is.na(MRR_current))%>%
-      # filter(is.na(MRR_last_month)) %>%
-      # filter(!is.na(MRR_past)) %>%
-      filter( (!is.na(MRR_current)) & MRR_current > 0  )%>%
-      filter( is.na(MRR_last_month) | MRR_last_month <= 0) %>%
-      filter( (!is.na(MRR_past)) & MRR_past > 0 ) %>%
-      summarise(MRR = sum(MRR_current, na.rm = T))
+      filter(cmrr > 0 & pmrr == 0 & lmrr > 0) %>%
+      summarise(MRR = sum(cmrr, na.rm = T))
 
-    # an alternative way is to add up the smaller number from MRR_current and MRR_last_month
+    # Get Retain
     retain1 <- alltable %>%
-      # filter(!is.na(MRR_current)) %>%
-      # filter(!is.na(MRR_last_month))%>%
-      filter( (!is.na(MRR_current)) &  MRR_current > 0 ) %>%
-      filter( (!is.na(MRR_last_month)) & MRR_last_month > 0 )%>%
-      filter(MRR_current >= MRR_last_month) %>%
-      summarise(MRR = sum(MRR_last_month, na.rm = T))
+      filter(cmrr > 0 & pmrr > 0) %>%
+      filter(cmrr >= pmrr) %>%
+      summarise(MRR = sum(pmrr, na.rm = T))
 
     retain2 <- alltable %>%
-      # filter(!is.na(MRR_current)) %>%
-      # filter(!is.na(MRR_last_month))%>%
-      filter( (!is.na(MRR_current)) &  MRR_current > 0 ) %>%
-      filter( (!is.na(MRR_last_month)) & MRR_last_month > 0 )%>%
-      filter(MRR_current < MRR_last_month) %>%
-      summarise(MRR = sum(MRR_current, na.rm = T))
+      filter(cmrr > 0 & pmrr > 0) %>%
+      filter(cmrr < pmrr) %>%
+      summarise(MRR = sum(cmrr, na.rm = T))
 
     retain = retain1 + retain2
 
+    # Get expansion
     expansion <- alltable %>%
-      # filter(!is.na(MRR_current)) %>%
-      # filter(!is.na(MRR_last_month))%>%
-      filter(   (!is.na(MRR_current)) &  MRR_current > 0 ) %>%
-      filter( (!is.na(MRR_last_month)) & MRR_last_month > 0 )%>%
-      filter(MRR_current > MRR_last_month) %>%
-      summarise(MRR = sum(MRR_current, na.rm = T) - sum(MRR_last_month, na.rm = T) )
+      filter(cmrr > 0 & pmrr >0) %>%
+      filter(cmrr > pmrr) %>%
+      summarise(MRR = sum(cmrr, na.rm = T) - sum(pmrr, na.rm = T) )
 
+    # Get contraction
     contraction <- alltable %>%
-      # filter(!is.na(MRR_current))%>%
-      # filter(!is.na(MRR_last_month)) %>%
-      filter( (!is.na(MRR_current)) &  MRR_current > 0  )%>%
-      filter( (!is.na(MRR_last_month)) & MRR_last_month > 0 ) %>%
-      filter(MRR_current < MRR_last_month) %>%
-      summarise(MRR = sum(MRR_last_month, na.rm = T)-sum(MRR_current, na.rm = T))
+      filter(cmrr > 0 & pmrr >0) %>%
+      filter(cmrr < pmrr) %>%
+      summarise(MRR = sum(pmrr, na.rm = T)-sum(cmrr, na.rm = T))
 
+    # Get churn
     churn <- alltable %>%
-      # filter(is.na(MRR_current))%>%
-      # filter(!is.na(MRR_last_month)) %>%
-      filter( is.na(MRR_current) | MRR_current <= 0 ) %>%
-      filter( (!is.na(MRR_last_month)) & MRR_last_month > 0 ) %>%
-      summarise(MRR = sum(MRR_last_month, na.rm = T))
+      filter(cmrr == 0 & pmrr > 0) %>%
+      summarise(MRR = sum(pmrr, na.rm = T))
 
     grow_matrix[i, "New"] <- new
     grow_matrix[i, "Retain"] <- retain
@@ -156,7 +115,6 @@ RevAct <- function(datall_revenue, type, dates){
     grow_matrix[i, "Contraction"] <- contraction
     grow_matrix[i, "Churn"] <- churn
   }
-
   grow_matrix$dates <- dates
 
   grow_matrix <- grow_matrix %>%
