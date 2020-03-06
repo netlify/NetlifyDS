@@ -4,12 +4,14 @@
 \alias{RevActUserProduct}
 \title{Calculate revenue accounting matrix per day, user and product}
 \usage{
-RevActUserProduct(datall_revenue, dates, type)
+RevActUserProduct(datall_revenue, dates, dates_full, type)
 }
 \arguments{
-\item{datall_revenue}{subscription data, need to have columns:  user_id, Effective_Start, Effective_End, MRR}
+\item{datall_revenue}{daily revenue data, need to have columns:  user_id, Product, active_date, MRR}
 
 \item{dates}{a date vector (have to be date type)}
+
+\item{dates_full}{a full range of dates}
 
 \item{type}{a vector of product names}
 }

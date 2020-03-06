@@ -1,7 +1,8 @@
 #' Calculate revenue accounting matrix per day, user and product
 #' @description It calculates the accounting matrix for each user and product given date, subscription data and product category.
 #' @param dates  a date vector (have to be date type)
-#' @param datall_revenue subscription data, need to have columns:  user_id, Effective_Start, Effective_End, MRR
+#' @param dates_full  a full range of dates
+#' @param datall_revenue daily revenue data, need to have columns:  user_id, Product, active_date, MRR
 #' @param type a vector of product names
 #' @return A revenue accounting matrix is returned for each day, user and product
 #' @author Hui Lin, \email{longqiman@gmail.com}
@@ -13,120 +14,112 @@
 #' @export
 #'
 
-RevActUserProduct <- function(datall_revenue, dates, type){
+RevActUserProduct <- function(datall_revenue, dates, dates_full, type){
 
-  dat <- total_revenue %>%
-    # change this filter to get result for different products
-    filter(Product %in% type)%>%
-    transmute(user_id=user_id,
+  dat <- datall_revenue %>%
+    ungroup()%>%
+    ## change this filter to get result for different products
+    filter(Product %in% type) %>%
+    transmute(user_id = user_id,
               MRR= MRR,
-              Effective_Start = as.Date(Effective_Start),
-              Effective_End = as.Date(Effective_End))
+              active_date = as.Date(active_date)) %>%
+    group_by(user_id, active_date) %>%
+    summarise(MRR = round(sum(MRR), 2)) %>%
+    ungroup()
 
-  res = NULL
-  for (i in 1:length(dates)){
-    # current month is from the 1nd day to the last day each month
-    int_start = floor_date(dates[i], unit = "month")
-    int_end = dates[i]
-    current = interval(int_start, int_end) # current month
+  ######################## BEGIN OF TEM_FUN #############################
+  tem_fun = function(time_point, dat, dates_full){
 
-    # calculate new revenue which is from new customer this month
-    active_current <- dat %>%
-      filter(Effective_Start <= dates[i]) %>%
-      filter(is.na(Effective_End) | Effective_End > dates[i]) %>%
+    cmon = time_point
+
+    # the previous month
+    pmon = floor_date(time_point, unit = "month")- days(1)
+
+    # the legacy month
+    lmon = dates_full[dates_full < pmon]
+
+    # current mrr
+    cmrr = dat %>%
+      filter(active_date == cmon) %>%
+      select(user_id, cmrr = MRR) %>%
+      filter(cmrr > 0)
+
+    # previous mrr
+    pmrr = dat %>%
+      filter(active_date == pmon) %>%
+      select(user_id, pmrr = MRR) %>%
+      filter(pmrr > 0)
+
+    # legacy mrr, get the maximum number
+    lmrr = dat %>%
+      filter(active_date %in% lmon) %>%
       group_by(user_id) %>%
-      summarise(MRR = round (sum(MRR), 2) ) %>%
-      select(user_id, MRR_current = MRR)
+      summarise(lmrr = max(MRR)) %>%
+      filter(lmrr > 0)
 
-    # previous month
-    int_start = floor_date(dates[i], unit = "month")  %m-% months(1)
-    int_end = ceiling_date(int_start, unit = "month") - days(1)
-    previous = interval(int_start, int_end)
 
-    active_last_month <- dat %>%
-      filter(Effective_Start <= int_end) %>%
-      filter(is.na(Effective_End) | Effective_End > int_end) %>%
-      group_by(user_id) %>%
-      summarise(MRR = round(sum(MRR), 2) ) %>%
-      select(user_id, MRR_last_month = MRR)
+    # join all together
+    alltable <- merge(cmrr, pmrr, all = T) %>%
+      merge(lmrr, all=T) %>%
+      NetlifyDS::impute_dat(method = "zero")
 
-    # all before until previous month
-    int_start = dates[i] %m-% months(12*100)
-    int_end = floor_date(dates[i], unit = "month")  %m-% months(1)
-    int_end = int_end - days(1)
-    past = interval(int_start, int_end)
+    # Get new
+    new = alltable %>%
+      filter( cmrr > 0 & pmrr == 0 & lmrr == 0) %>%
+      select(user_id, new = cmrr )
 
-    active_past <- dat %>%
-      filter(Effective_Start <= int_end) %>%
-      filter(is.na(Effective_End) | Effective_End > int_end ) %>%
-      group_by(user_id) %>%
-      summarise(MRR = round(sum(MRR),2) ) %>%
-      select(user_id, MRR_past = MRR)
-
-    alltable <- merge(active_current, active_last_month, all = T) %>%
-      merge(active_past, all=T)
-
-    ########################## Break out the revenue ###########################
-
-    # current month is from the 1nd day to the last day each month
-
-    new <- alltable %>%
-      filter( (is.na(MRR_past) | MRR_past <= 0) &  (is.na(MRR_last_month) | MRR_last_month <= 0 ) ) %>%
-      select(user_id, new = MRR_current )
-
+    # Get reesurrected
     resurrected <- alltable %>%
-      filter( (!is.na(MRR_current)) & MRR_current > 0  )%>%
-      filter( is.na(MRR_last_month) | MRR_last_month <= 0) %>%
-      filter( (!is.na(MRR_past)) & MRR_past > 0 ) %>%
-      select(user_id,resurrected = MRR_current)
+      filter(cmrr > 0 & pmrr == 0 & lmrr > 0) %>%
+      select(user_id,resurrected = cmrr)
 
-    # an alternative way is to add up the smaller number from MRR_current and MRR_last_month
+    # Get Retain
     retain1 <- alltable %>%
-      filter( (!is.na(MRR_current)) &  MRR_current > 0 ) %>%
-      filter( (!is.na(MRR_last_month)) & MRR_last_month > 0 )%>%
-      filter(MRR_current >= MRR_last_month) %>%
-      select(user_id,retain1 = MRR_last_month)
+      filter(cmrr > 0 & pmrr > 0) %>%
+      filter(cmrr >= pmrr) %>%
+      select(user_id,retain1 = pmrr)
 
     retain2 <- alltable %>%
-      filter(  (!is.na(MRR_current)) &  MRR_current > 0 ) %>%
-      filter( (!is.na(MRR_last_month)) & MRR_last_month > 0 )%>%
-      filter(MRR_current < MRR_last_month) %>%
-      select(user_id,retain2 = MRR_current)
+      filter(cmrr > 0 & pmrr > 0) %>%
+      filter(cmrr < pmrr) %>%
+      select(user_id,retain2 = cmrr)
 
     retain = merge(retain1, retain2, all=T) %>%
-      impute0()%>%
+      NetlifyDS::impute_dat(method = "zero")%>%
       transmute(user_id = user_id, retain = retain1 + retain2)
 
+    # Get expansion
     expansion <- alltable %>%
-      filter(   (!is.na(MRR_current)) &  MRR_current > 0 ) %>%
-      filter( (!is.na(MRR_last_month)) & MRR_last_month > 0 )%>%
-      filter(MRR_current > MRR_last_month) %>%
-      impute0()%>%
-      transmute(user_id = user_id, expansion = MRR_current-MRR_last_month)
+      filter(cmrr > 0 & pmrr >0) %>%
+      filter(cmrr > pmrr) %>%
+      transmute(user_id = user_id, expansion = cmrr -pmrr)
 
+    # Get contraction
     contraction <- alltable %>%
-      filter( (!is.na(MRR_current)) &  MRR_current > 0  )%>%
-      filter( (!is.na(MRR_last_month)) & MRR_last_month > 0 ) %>%
-      filter(MRR_current < MRR_last_month) %>%
-      impute0()%>%
-      transmute(user_id = user_id, contraction =MRR_last_month-MRR_current)
+      filter(cmrr > 0 & pmrr >0) %>%
+      filter(cmrr < pmrr) %>%
+      transmute(user_id = user_id, contraction =pmrr-cmrr)
 
+    # Get churn
     churn <- alltable %>%
-      filter( is.na(MRR_current) | MRR_current <= 0 ) %>%
-      filter( (!is.na(MRR_last_month)) & MRR_last_month > 0 ) %>%
-      transmute(user_id = user_id, churn =MRR_last_month)
+      filter(cmrr == 0 & pmrr > 0) %>%
+      transmute(user_id = user_id, churn =pmrr)
 
     res0 = merge(new, resurrected, all = T)
     res0 = merge(res0, retain, all = T)
     res0 = merge(res0, expansion, all = T)
     res0 = merge(res0, contraction, all = T)
     res0 = merge(res0, churn, all = T)
-    res0 = impute0(res0)
+    res0 = NetlifyDS::impute_dat(res0, method = "zero")
 
-    res0$date = dates[i]
-
-    res = rbind(res, res0)
-    res = res %>% filter( !(new == 0 &  resurrected == 0 & retain == 0 &  expansion == 0 & contraction == 0 & churn == 0) )
+    res0$date = time_point
+    return(res0)
   }
+
+  ######################## END OF TEM_FUN #############################
+
+  res = do.call("rbind", lapply(dates, function(time_point){tem_fun(time_point, dat = dat, dates_full = dates_full)}))
+  res = res %>% filter( !(new == 0 &  resurrected == 0 & retain == 0 &  expansion == 0 & contraction == 0 & churn == 0) )
+
   return(res)
 }
