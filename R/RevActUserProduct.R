@@ -33,7 +33,8 @@ RevActUserProduct <- function(datall_revenue, dates, dates_full, type){
     cmon = time_point
 
     # the previous month
-    pmon = floor_date(time_point, unit = "month")- days(1)
+    # pmon = floor_date(time_point, unit = "month")- days(1)
+    pmon =  dates_full[which(dates_full == cmon) - 1]
 
     # the legacy month
     lmon = dates_full[dates_full < pmon]
