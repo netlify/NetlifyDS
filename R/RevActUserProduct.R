@@ -19,12 +19,12 @@ RevActUserProduct <- function(datall_revenue, dates, dates_full, type){
   dat <- datall_revenue %>%
     ungroup()%>%
     ## change this filter to get result for different products
-    filter(Product %in% type) %>%
-    transmute(user_id = user_id,
+    dplyr::filter(Product %in% type) %>%
+    dplyr::transmute(user_id = user_id,
               MRR= MRR,
               active_date = as.Date(active_date)) %>%
-    group_by(user_id, active_date) %>%
-    summarise(MRR = round(sum(MRR), 2)) %>%
+    dplyr::group_by(user_id, active_date) %>%
+    dplyr::summarise(MRR = round(sum(MRR), 2)) %>%
     ungroup()
 
   ######################## BEGIN OF TEM_FUN #############################
@@ -41,22 +41,22 @@ RevActUserProduct <- function(datall_revenue, dates, dates_full, type){
 
     # current mrr
     cmrr = dat %>%
-      filter(active_date == cmon) %>%
-      select(user_id, cmrr = MRR) %>%
-      filter(cmrr > 0)
+      dplyr::filter(active_date == cmon) %>%
+      dplyr::select(user_id, cmrr = MRR) %>%
+      dplyr::filter(cmrr > 0)
 
     # previous mrr
     pmrr = dat %>%
-      filter(active_date == pmon) %>%
-      select(user_id, pmrr = MRR) %>%
-      filter(pmrr > 0)
+      dplyr::filter(active_date == pmon) %>%
+      dplyr::select(user_id, pmrr = MRR) %>%
+      dplyr::filter(pmrr > 0)
 
     # legacy mrr, get the maximum number
     lmrr = dat %>%
-      filter(active_date %in% lmon) %>%
-      group_by(user_id) %>%
-      summarise(lmrr = max(MRR)) %>%
-      filter(lmrr > 0)
+      dplyr::filter(active_date %in% lmon) %>%
+      dplyr::group_by(user_id) %>%
+      dplyr::summarise(lmrr = max(MRR)) %>%
+      dplyr::filter(lmrr > 0)
 
 
     # join all together
@@ -66,45 +66,45 @@ RevActUserProduct <- function(datall_revenue, dates, dates_full, type){
 
     # Get new
     new = alltable %>%
-      filter( cmrr > 0 & pmrr == 0 & lmrr == 0) %>%
-      select(user_id, new = cmrr )
+      dplyr::filter( cmrr > 0 & pmrr == 0 & lmrr == 0) %>%
+      dplyr::select(user_id, new = cmrr )
 
     # Get reesurrected
     resurrected <- alltable %>%
-      filter(cmrr > 0 & pmrr == 0 & lmrr > 0) %>%
-      select(user_id,resurrected = cmrr)
+      dplyr::filter(cmrr > 0 & pmrr == 0 & lmrr > 0) %>%
+      dplyr::select(user_id,resurrected = cmrr)
 
     # Get Retain
     retain1 <- alltable %>%
-      filter(cmrr > 0 & pmrr > 0) %>%
-      filter(cmrr >= pmrr) %>%
-      select(user_id,retain1 = pmrr)
+      dplyr::filter(cmrr > 0 & pmrr > 0) %>%
+      dplyr::filter(cmrr >= pmrr) %>%
+      dplyr::select(user_id,retain1 = pmrr)
 
     retain2 <- alltable %>%
-      filter(cmrr > 0 & pmrr > 0) %>%
-      filter(cmrr < pmrr) %>%
-      select(user_id,retain2 = cmrr)
+      dplyr::filter(cmrr > 0 & pmrr > 0) %>%
+      dplyr::filter(cmrr < pmrr) %>%
+      dplyr::select(user_id,retain2 = cmrr)
 
     retain = merge(retain1, retain2, all=T) %>%
       NetlifyDS::impute_dat(method = "zero")%>%
-      transmute(user_id = user_id, retain = retain1 + retain2)
+      dplyr::transmute(user_id = user_id, retain = retain1 + retain2)
 
     # Get expansion
     expansion <- alltable %>%
-      filter(cmrr > 0 & pmrr >0) %>%
-      filter(cmrr > pmrr) %>%
-      transmute(user_id = user_id, expansion = cmrr -pmrr)
+      dplyr::filter(cmrr > 0 & pmrr >0) %>%
+      dplyr::filter(cmrr > pmrr) %>%
+      dplyr::transmute(user_id = user_id, expansion = cmrr -pmrr)
 
     # Get contraction
     contraction <- alltable %>%
-      filter(cmrr > 0 & pmrr >0) %>%
-      filter(cmrr < pmrr) %>%
-      transmute(user_id = user_id, contraction =pmrr-cmrr)
+      dplyr::filter(cmrr > 0 & pmrr >0) %>%
+      dplyr::filter(cmrr < pmrr) %>%
+      dplyr::transmute(user_id = user_id, contraction =pmrr-cmrr)
 
     # Get churn
     churn <- alltable %>%
-      filter(cmrr == 0 & pmrr > 0) %>%
-      transmute(user_id = user_id, churn =pmrr)
+      dplyr::filter(cmrr == 0 & pmrr > 0) %>%
+      dplyr::transmute(user_id = user_id, churn =pmrr)
 
     res0 = merge(new, resurrected, all = T)
     res0 = merge(res0, retain, all = T)
@@ -120,7 +120,7 @@ RevActUserProduct <- function(datall_revenue, dates, dates_full, type){
   ######################## END OF TEM_FUN #############################
 
   res = do.call("rbind", lapply(dates, function(time_point){tem_fun(time_point, dat = dat, dates_full = dates_full)}))
-  res = res %>% filter( !(new == 0 &  resurrected == 0 & retain == 0 &  expansion == 0 & contraction == 0 & churn == 0) )
+  res = res %>% dplyr::filter( !(new == 0 &  resurrected == 0 & retain == 0 &  expansion == 0 & contraction == 0 & churn == 0) )
 
   return(res)
 }
