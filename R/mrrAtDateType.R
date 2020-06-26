@@ -27,7 +27,7 @@ mrrAtDateType <- function(time_point, subs, type = NULL) {
       dplyr::filter( is.na(Effective_End) | Effective_End > time_point)
 
     res <- actives %>%
-      dplyr::group_by(account_id,user_id,Product) %>%
+      dplyr::group_by(account_id,user_id,Product, rate_plan_name) %>%
       # round it in case we have some magic number again
       dplyr::summarise(MRR = round(sum(MRR , na.rm=T), 10))
 
